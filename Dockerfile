@@ -21,12 +21,13 @@ RUN bunx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
-# Production image
-FROM base AS runner
+# Production image - use Node.js for standalone
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL="file:/app/db/custom.db"
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
@@ -34,8 +35,13 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/db ./db
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Install prisma in production
+RUN npm install prisma
+RUN npx prisma generate
+
+# Create db directory if needed
+RUN mkdir -p /app/db
 
 EXPOSE 3000
 
@@ -43,4 +49,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Run migrations and start server
-CMD ["sh", "-c", "bunx prisma db push && bun server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
