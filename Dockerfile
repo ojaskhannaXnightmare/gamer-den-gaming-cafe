@@ -46,6 +46,9 @@ ENV DATABASE_URL="file:/app/db/custom.db"
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Install SQLite
+RUN apk add --no-cache sqlite
+
 # Copy built application
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
@@ -53,10 +56,12 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/db ./db
 
-# Install SQLite and Prisma CLI for runtime
-RUN apk add --no-cache sqlite
-RUN npm install -g prisma
-RUN prisma generate
+# Copy Prisma client from builder (already generated with correct version)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy prisma CLI from builder
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Ensure db directory exists and has permissions
 RUN mkdir -p /app/db && chmod -R 755 /app/db
@@ -65,4 +70,4 @@ RUN mkdir -p /app/db && chmod -R 755 /app/db
 EXPOSE 3000
 
 # Start script - run migrations then start server
-CMD sh -c "prisma db push --accept-data-loss --skip-generate && node server.js"
+CMD sh -c "npx prisma db push --accept-data-loss --skip-generate && node server.js"
