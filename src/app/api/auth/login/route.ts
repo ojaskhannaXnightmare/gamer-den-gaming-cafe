@@ -8,11 +8,12 @@ function hashPassword(password: string): string {
 }
 
 // Global mock users store for Vercel serverless
+// This is shared between login and signup routes
 declare global {
   var mockUsersStore: Record<string, { id: string; username: string; password: string; name: string; email?: string; phone?: string; points: number; totalSpent: number; createdAt: Date }> | undefined;
 }
 
-// Get or initialize mock users store
+// Get or initialize mock users store (shared with signup)
 function getMockUsersStore() {
   if (!global.mockUsersStore) {
     global.mockUsersStore = {
@@ -22,6 +23,15 @@ function getMockUsersStore() {
         password: hashPassword('admin123'),
         name: 'Admin',
         email: 'admin@gamersden.com',
+        points: 0,
+        totalSpent: 0,
+        createdAt: new Date(),
+      },
+      'test': {
+        id: 'test-user',
+        username: 'test',
+        password: hashPassword('test'),
+        name: 'Test User',
         points: 0,
         totalSpent: 0,
         createdAt: new Date(),
