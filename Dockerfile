@@ -1,52 +1,68 @@
-# Use Bun as the base image
-FROM oven/bun:1 AS base
+# Gamer's Den - Gaming Cafe Website
+# Dockerfile for Railway Deployment
+
+# ============================================
+# Stage 1: Install dependencies
+# ============================================
+FROM oven/bun:1-alpine AS deps
 WORKDIR /app
 
-# Install dependencies
-FROM base AS deps
+# Copy package files
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
+
+# Install dependencies
 RUN bun install --frozen-lockfile
 RUN bunx prisma generate
 
-# Build the application
-FROM base AS builder
+# ============================================
+# Stage 2: Build the application
+# ============================================
+FROM oven/bun:1-alpine AS builder
+WORKDIR /app
+
+# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
-RUN bunx prisma generate
-
-# Build Next.js
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN bun run build
-
-# Production image - use Node.js for standalone
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
+# Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:/app/db/custom.db"
 
-# Copy necessary files
+# Generate Prisma client and build
+RUN bunx prisma generate
+RUN bun run build
+
+# ============================================
+# Stage 3: Production runner
+# ============================================
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL="file:/app/db/custom.db"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Copy built application
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/db ./db
 
-# Install prisma in production
-RUN npm install prisma
-RUN npx prisma generate
+# Install SQLite and Prisma CLI for runtime
+RUN apk add --no-cache sqlite
+RUN npm install -g prisma
+RUN prisma generate
 
-# Create db directory if needed
-RUN mkdir -p /app/db
+# Ensure db directory exists and has permissions
+RUN mkdir -p /app/db && chmod -R 755 /app/db
 
+# Expose port
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Run migrations and start server
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
+# Start script - run migrations then start server
+CMD sh -c "prisma db push --accept-data-loss --skip-generate && node server.js"
