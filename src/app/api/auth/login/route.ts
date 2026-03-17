@@ -8,19 +8,29 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Mock users store for Vercel serverless (in-memory, per function invocation)
-const mockUsers: Record<string, { id: string; username: string; password: string; name: string; email?: string; phone?: string; points: number; totalSpent: number; createdAt: Date }> = {
-  'admin': {
-    id: 'admin-user',
-    username: 'admin',
-    password: hashPassword('admin123'),
-    name: 'Admin',
-    email: 'admin@gamersden.com',
-    points: 0,
-    totalSpent: 0,
-    createdAt: new Date(),
+// Global mock users store for Vercel serverless
+declare global {
+  var mockUsersStore: Record<string, { id: string; username: string; password: string; name: string; email?: string; phone?: string; points: number; totalSpent: number; createdAt: Date }> | undefined;
+}
+
+// Get or initialize mock users store
+function getMockUsersStore() {
+  if (!global.mockUsersStore) {
+    global.mockUsersStore = {
+      'admin': {
+        id: 'admin-user',
+        username: 'admin',
+        password: hashPassword('admin123'),
+        name: 'Admin',
+        email: 'admin@gamersden.com',
+        points: 0,
+        totalSpent: 0,
+        createdAt: new Date(),
+      }
+    };
   }
-};
+  return global.mockUsersStore;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const hashedPassword = hashPassword(password);
+    const mockUsers = getMockUsersStore();
 
     // Try database first
     try {
