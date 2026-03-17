@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import crypto from 'crypto';
 
-// Hardcoded admin credentials - simple and reliable
+// Hardcoded admin credentials - simple and reliable for Vercel
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'admin123';
 
@@ -14,44 +12,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
     }
 
-    // Simple hardcoded check
+    // Simple hardcoded check - works on Vercel without database
     if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Ensure admin user exists in database
-    const hashedPassword = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest('hex');
-    
-    let adminUser = await db.user.findUnique({
-      where: { username: ADMIN_USERNAME }
-    });
-
-    if (!adminUser) {
-      try {
-        adminUser = await db.user.create({
-          data: {
-            username: ADMIN_USERNAME,
-            password: hashedPassword,
-            email: 'admin@gamersden.com',
-            name: 'Admin',
-            isAdmin: true,
-          }
-        });
-
-      } catch {
-        // Admin user creation failed, continue with session-only auth
-      }
-    }
-
+    // Success - set session cookie
     const response = NextResponse.json({ 
       success: true, 
       user: { 
-        id: adminUser?.id || 'admin-session', 
+        id: 'admin-session', 
         username: ADMIN_USERNAME 
       } 
     });
 
-    response.cookies.set('admin_session', adminUser?.id || 'admin-session', {
+    response.cookies.set('admin_session', 'admin-session', {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',

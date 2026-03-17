@@ -11,27 +11,32 @@ export async function GET() {
       return NextResponse.json({ user: null });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        email: true,
-        phone: true,
-        avatar: true,
-        points: true,
-        totalSpent: true,
-        createdAt: true,
-      },
-    });
+    // Try database first
+    try {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          phone: true,
+          avatar: true,
+          points: true,
+          totalSpent: true,
+          createdAt: true,
+        },
+      });
 
-    if (!user) {
-      cookieStore.delete('session_user_id');
-      return NextResponse.json({ user: null });
+      if (user) {
+        return NextResponse.json({ user });
+      }
+    } catch {
+      console.log('Database unavailable for session check');
     }
 
-    return NextResponse.json({ user });
+    // Database unavailable or user not found - return no user
+    return NextResponse.json({ user: null });
   } catch (error) {
     console.error('Session error:', error);
     return NextResponse.json({ user: null });
