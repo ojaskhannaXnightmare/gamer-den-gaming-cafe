@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
-import { db } from '@/lib/db';
 
 // Simple password hashing
 function hashPassword(password: string): string {
@@ -48,41 +47,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = hashPassword(password);
     const mockUsers = getMockUsersStore();
 
-    // Try database first
-    try {
-      const user = await db.user.findUnique({
-        where: { username },
-      });
-
-      if (user && user.password === hashedPassword) {
-        // Set session cookie
-        const cookieStore = await cookies();
-        cookieStore.set('session_user_id', user.id, {
-          httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-        });
-
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            points: user.points,
-            totalSpent: user.totalSpent,
-            createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
-          },
-        });
-      }
-    } catch {
-      console.log('Database unavailable for login, checking mock users');
-    }
-
-    // Database unavailable or user not found in DB - check mock users
+    // Check mock users (no database needed)
     const mockUser = mockUsers[username];
     if (mockUser && mockUser.password === hashedPassword) {
       const cookieStore = await cookies();
@@ -113,8 +78,7 @@ export async function POST(request: NextRequest) {
       { error: 'Invalid username or password' },
       { status: 401 }
     );
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to login' },
       { status: 500 }

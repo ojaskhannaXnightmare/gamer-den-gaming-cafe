@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
-import { db } from '@/lib/db';
 
 // Simple password hashing
 function hashPassword(password: string): string {
@@ -59,120 +58,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const hashedPassword = hashPassword(password);
     const mockUsers = getMockUsersStore();
 
-    // Try database first
-    try {
-      // Check if user already exists
-      const existingUser = await db.user.findUnique({
-        where: { username },
-      });
-
-      if (existingUser) {
-        return NextResponse.json(
-          { error: 'Username already taken' },
-          { status: 400 }
-        );
-      }
-
-      // Create user in database
-      const user = await db.user.create({
-        data: {
-          username,
-          password: hashedPassword,
-          email: email || null,
-          phone: phone || null,
-          name: username,
-        },
-      });
-
-      // Also add to mock store for this session
-      mockUsers[username] = {
-        id: user.id,
-        username: user.username,
-        password: hashedPassword,
-        name: user.name || username,
-        email: user.email || undefined,
-        phone: user.phone || undefined,
-        points: user.points,
-        totalSpent: user.totalSpent,
-        createdAt: user.createdAt || new Date(),
-      };
-
-      // Set session cookie
-      const cookieStore = await cookies();
-      cookieStore.set('session_user_id', user.id, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
-
-      return NextResponse.json({
-        success: true,
-        user: {
-          id: user.id,
-          username: user.username,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          points: user.points,
-          totalSpent: user.totalSpent,
-          createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
-        },
-      });
-    } catch {
-      console.log('Database unavailable for signup, using mock store');
-      
-      // Check mock users
-      if (mockUsers[username]) {
-        return NextResponse.json(
-          { error: 'Username already taken' },
-          { status: 400 }
-        );
-      }
-
-      // Create mock user
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        username,
-        password: hashedPassword,
-        name: username,
-        email: email,
-        phone: phone,
-        points: 0,
-        totalSpent: 0,
-        createdAt: new Date(),
-      };
-      
-      mockUsers[username] = mockUser;
-
-      // Set session cookie
-      const cookieStore = await cookies();
-      cookieStore.set('session_user_id', mockUser.id, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
-
-      return NextResponse.json({
-        success: true,
-        user: {
-          id: mockUser.id,
-          username: mockUser.username,
-          name: mockUser.name,
-          email: mockUser.email,
-          phone: mockUser.phone,
-          points: mockUser.points,
-          totalSpent: mockUser.totalSpent,
-          createdAt: mockUser.createdAt.toISOString(),
-        },
-      });
+    // Check if username already taken
+    if (mockUsers[username]) {
+      return NextResponse.json(
+        { error: 'Username already taken' },
+        { status: 400 }
+      );
     }
-  } catch (error) {
-    console.error('Signup error:', error);
+
+    // Create mock user
+    const hashedPassword = hashPassword(password);
+    const newUser = {
+      id: `user-${Date.now()}`,
+      username,
+      password: hashedPassword,
+      name: username,
+      email: email || undefined,
+      phone: phone || undefined,
+      points: 0,
+      totalSpent: 0,
+      createdAt: new Date(),
+    };
+
+    mockUsers[username] = newUser;
+
+    // Set session cookie
+    const cookieStore = await cookies();
+    cookieStore.set('session_user_id', newUser.id, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        points: newUser.points,
+        totalSpent: newUser.totalSpent,
+        createdAt: newUser.createdAt.toISOString(),
+      },
+    });
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create account' },
       { status: 500 }
