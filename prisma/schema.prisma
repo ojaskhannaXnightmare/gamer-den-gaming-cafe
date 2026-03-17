@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../db/custom.db"
+}
+
+// User Model for Authentication
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  password     String
+  email        String?   @unique
+  phone        String?
+  name         String?
+  avatar       String?
+  points       Int       @default(0)
+  totalSpent   Float     @default(0)
+  isAdmin      Boolean   @default(false)
+  bookings     Booking[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// Gaming Console Types
+model Console {
+  id          String   @id @default(cuid())
+  name        String   // PS5, PS4, VR, Projector
+  slug        String   @unique
+  description String?
+  pricePerHour Float
+  image       String?
+  features    String?  // JSON string of features
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  slots       Slot[]
+  bookings    Booking[]
+}
+
+// Time Slots for each console
+model Slot {
+  id          String   @id @default(cuid())
+  consoleId   String
+  console     Console  @relation(fields: [consoleId], references: [id])
+  startTime   String   // HH:mm format
+  endTime     String   // HH:mm format
+  isAvailable Boolean  @default(true)
+  dayOfWeek   Int?     // 0-6 (Sunday-Saturday), null for all days
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bookings    Booking[]
+  
+  @@unique([consoleId, startTime, dayOfWeek])
+}
+
+// Game Library
+model Game {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  genre       String   // Action, Racing, Sports, etc.
+  consoleType String?  // PS5, PS4, Both, VR
+  image       String?
+  rating      Float?
+  isFeatured  Boolean  @default(false)
+  isPopular   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Booking System
+model Booking {
+  id            String    @id @default(cuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  consoleId     String
+  console       Console   @relation(fields: [consoleId], references: [id])
+  slotId        String
+  slot          Slot      @relation(fields: [slotId], references: [id])
+  customerName  String
+  customerPhone String
+  customerEmail String?
+  date          String    // YYYY-MM-DD format
+  startTime     String
+  endTime       String
+  duration      Int       // in minutes
+  players       Int       @default(1)
+  totalPrice    Float
+  status        String    @default("pending") // pending, confirmed, completed, cancelled
+  paymentMethod String?
+  paymentStatus String    @default("pending") // pending, paid, failed, refunded
+  transactionId String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Events and Tournaments
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  gameName    String?
+  date        String   // YYYY-MM-DD
+  time        String   // HH:mm
+  endDate     String?
+  prize       String?
+  maxPlayers  Int?
+  currentPlayers Int   @default(0)
+  price       Float    @default(0)
+  image       String?
+  status      String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Gallery Images/Videos
+model GalleryItem {
+  id          String   @id @default(cuid())
+  title       String?
+  description String?
+  type        String   // image, video
+  url         String
+  thumbnail   String?
+  category    String?  // interior, events, gaming, etc.
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Announcements / Updates
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String   @default("info") // info, offer, tournament, event
+  isActive    Boolean  @default(true)
+  startDate   String?
+  endDate     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Pricing Packages
+model PricingPackage {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  consoleType String
+  price       Float
+  duration    Int      // in minutes
+  discount    Float?   // percentage
+  includes    String?  // JSON string of what's included
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Contact Messages
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    String   @default("new") // new, read, replied, resolved
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
