@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const hashedPassword = hashPassword(password);
     const mockUsers = getMockUsersStore();
 
     // Check if username already taken
@@ -69,7 +70,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create mock user
-    const hashedPassword = hashPassword(password);
     const newUser = {
       id: `user-${Date.now()}`,
       username,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       totalSpent: 0,
       createdAt: new Date(),
     };
-
+    
     mockUsers[username] = newUser;
 
     // Set session cookie
