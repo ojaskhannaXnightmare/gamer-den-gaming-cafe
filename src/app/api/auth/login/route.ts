@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         phone: user.phone,
         points: user.points,
         totalSpent: user.totalSpent,
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {

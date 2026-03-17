@@ -32,6 +32,11 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const { name, description, consoleType, price, duration, discount, includes, isActive } = data;
 
+    // Validate required fields
+    if (!name || !consoleType) {
+      return NextResponse.json({ error: 'Missing required fields: name and consoleType are required' }, { status: 400 });
+    }
+
     const pricing = await db.pricingPackage.create({
       data: {
         name,

@@ -39,6 +39,11 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const { title, slug, description, genre, consoleType, rating, isFeatured, isPopular, image } = data;
 
+    // Validate required fields
+    if (!title) {
+      return NextResponse.json({ error: 'Missing required field: title is required' }, { status: 400 });
+    }
+
     const gameSlug = slug || generateSlug(title);
 
     const game = await db.game.create({

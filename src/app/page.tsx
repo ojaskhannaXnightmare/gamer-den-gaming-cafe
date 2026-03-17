@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBookingStore, useAuthStore, useAdminStore, User as UserType } from '@/lib/store';
+import { useBookingStore, useAuthStore, useAdminStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -124,7 +124,7 @@ function AuthModal() {
       closeAuthModal();
       setUsername('');
       setPassword('');
-    } catch (err) {
+    } catch {
       setError('Failed to connect to server');
     } finally {
       setIsLoading(false);

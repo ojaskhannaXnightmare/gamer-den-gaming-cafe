@@ -39,6 +39,11 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const { title, slug, description, gameName, date, time, endDate, prize, maxPlayers, price, status, image } = data;
 
+    // Validate required fields
+    if (!title || !date || !time) {
+      return NextResponse.json({ error: 'Missing required fields: title, date, and time are required' }, { status: 400 });
+    }
+
     const eventSlug = slug || generateSlug(title);
 
     const event = await db.event.create({

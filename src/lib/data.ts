@@ -68,6 +68,20 @@ export interface Slot {
   isAvailable: boolean;
 }
 
+// Helper to generate time slots
+function generateSlots(): Slot[] {
+  const slots: Slot[] = [];
+  for (let hour = 9; hour < 23; hour++) {
+    slots.push({
+      id: `slot-${hour}`,
+      startTime: `${hour.toString().padStart(2, '0')}:00`,
+      endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
+      isAvailable: true,
+    });
+  }
+  return slots;
+}
+
 // Static fallback data (always works on Vercel)
 const staticConsoles: Console[] = [
   {
@@ -78,7 +92,6 @@ const staticConsoles: Console[] = [
     pricePerHour: 150,
     features: JSON.stringify(['4K Gaming', 'Ray Tracing', 'DualSense Controller', '120fps Support']),
     isActive: true,
-    slots: generateSlots('ps5'),
   },
   {
     id: 'ps4',
@@ -88,7 +101,6 @@ const staticConsoles: Console[] = [
     pricePerHour: 80,
     features: JSON.stringify(['4K Upscaling', 'HDR Support', 'DualShock 4', '500+ Games']),
     isActive: true,
-    slots: generateSlots('ps4'),
   },
   {
     id: 'vr',
@@ -98,7 +110,6 @@ const staticConsoles: Console[] = [
     pricePerHour: 200,
     features: JSON.stringify(['360° Vision', 'Motion Controllers', 'Immersive Audio', '50+ VR Games']),
     isActive: true,
-    slots: generateSlots('vr'),
   },
   {
     id: 'projector',
@@ -108,7 +119,6 @@ const staticConsoles: Console[] = [
     pricePerHour: 250,
     features: JSON.stringify(['120" Screen', '4K Projection', 'Surround Sound', 'Multiplayer Setup']),
     isActive: true,
-    slots: generateSlots('projector'),
   },
 ];
 
@@ -142,38 +152,20 @@ const staticPricing: PricingPackage[] = [
   { id: 'pkg-4', name: 'VR Experience', description: 'Immersive VR session', consoleType: 'VR', price: 200, duration: 60, discount: null, includes: JSON.stringify(['1 Hour VR', 'Multiple Games']), isActive: true },
 ];
 
-function generateSlots(consoleId: string): Slot[] {
-  const slots: Slot[] = [];
-  for (let hour = 9; hour < 23; hour++) {
-    slots.push({
-      id: `${consoleId}-${hour}`,
-      startTime: `${hour.toString().padStart(2, '0')}:00`,
-      endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
-      isAvailable: true,
-    });
-  }
-  return slots;
-}
+// Placeholder function - no longer needed
+export async function ensureDatabase() {}
 
-// Simple placeholder - Vercel uses static data
-export async function ensureDatabase() {
-  // Vercel serverless - use static data
-}
-
-// Seed database - on Vercel we use static fallback
-export async function seedDatabase() {
-  // Vercel serverless - seeding happens via static data
-}
+// Placeholder function - no longer needed  
+export async function seedDatabase() {}
 
 // Get all consoles
 export async function getConsoles(): Promise<Console[]> {
   try {
     const consoles = await db.console.findMany({
       where: { isActive: true },
-      include: { slots: true },
     });
     if (consoles.length > 0) return consoles as Console[];
-  } catch (error) {
+  } catch {
     console.log('Using static console data');
   }
   return staticConsoles;
@@ -187,10 +179,10 @@ export async function getFeaturedGames(): Promise<Game[]> {
       orderBy: { rating: 'desc' },
     });
     if (games.length > 0) return games as Game[];
-  } catch (error) {
+  } catch {
     console.log('Using static game data');
   }
-  return staticGames;
+  return staticGames.filter(g => g.isFeatured);
 }
 
 // Get all games
@@ -200,7 +192,7 @@ export async function getGames(): Promise<Game[]> {
       orderBy: [{ isFeatured: 'desc' }, { rating: 'desc' }],
     });
     if (games.length > 0) return games as Game[];
-  } catch (error) {
+  } catch {
     console.log('Using static game data');
   }
   return staticGames;
@@ -214,7 +206,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       orderBy: { createdAt: 'desc' },
     });
     if (announcements.length > 0) return announcements as Announcement[];
-  } catch (error) {
+  } catch {
     console.log('Using static announcement data');
   }
   return staticAnnouncements;
@@ -228,7 +220,7 @@ export async function getUpcomingEvents(): Promise<Event[]> {
       orderBy: { date: 'asc' },
     });
     if (events.length > 0) return events as Event[];
-  } catch (error) {
+  } catch {
     console.log('Using static event data');
   }
   return staticEvents;
@@ -242,31 +234,24 @@ export async function getPricingPackages(): Promise<PricingPackage[]> {
       orderBy: { price: 'asc' },
     });
     if (packages.length > 0) return packages as PricingPackage[];
-  } catch (error) {
+  } catch {
     console.log('Using static pricing data');
   }
   return staticPricing;
 }
 
-// Get available slots
-export async function getAvailableSlots(consoleId: string, date: string): Promise<Slot[]> {
+// Get available slots for a console
+export async function getAvailableSlots(consoleId: string, _date: string): Promise<Slot[]> {
   try {
-    const bookings = await db.booking.findMany({
-      where: { consoleId, date, status: { notIn: ['cancelled'] } },
-      select: { slotId: true },
-    });
-    const bookedSlotIds = bookings.map(b => b.slotId);
     const slots = await db.slot.findMany({
-      where: { consoleId, isAvailable: true, id: { notIn: bookedSlotIds } },
+      where: { consoleId, isAvailable: true },
       orderBy: { startTime: 'asc' },
     });
     if (slots.length > 0) return slots as Slot[];
-  } catch (error) {
+  } catch {
     console.log('Using static slot data');
   }
-  
-  const consoleData = staticConsoles.find(c => c.id === consoleId);
-  return consoleData?.slots || generateSlots(consoleId);
+  return generateSlots();
 }
 
 // Create a booking
@@ -287,12 +272,23 @@ export async function createBooking(data: {
   try {
     return await db.booking.create({
       data: {
-        ...data,
+        consoleId: data.consoleId,
+        slotId: data.slotId,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail || null,
+        date: data.date,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        duration: data.duration,
+        players: data.players,
+        totalPrice: data.totalPrice,
         status: 'pending',
         paymentStatus: 'pending',
+        userId: data.userId || null,
       },
     });
-  } catch (error) {
+  } catch {
     // Return mock success for Vercel demo
     return {
       id: `booking-${Date.now()}`,

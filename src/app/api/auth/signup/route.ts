@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         points: user.points,
         totalSpent: user.totalSpent,
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {

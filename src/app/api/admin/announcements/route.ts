@@ -32,6 +32,11 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const { title, content, type, isActive, startDate, endDate } = data;
 
+    // Validate required fields
+    if (!title || !content) {
+      return NextResponse.json({ error: 'Missing required fields: title and content are required' }, { status: 400 });
+    }
+
     const announcement = await db.announcement.create({
       data: {
         title,
