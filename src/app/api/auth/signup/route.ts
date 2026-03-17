@@ -8,8 +8,29 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// In-memory user store for Vercel (resets on each function invocation)
-const mockUsers: Map<string, { id: string; username: string; password: string; name: string; points: number; totalSpent: number; createdAt: Date }> = new Map();
+// Global mock users store for Vercel serverless
+declare global {
+  var mockUsersStore: Record<string, { id: string; username: string; password: string; name: string; email?: string; phone?: string; points: number; totalSpent: number; createdAt: Date }> | undefined;
+}
+
+// Get or initialize mock users store
+function getMockUsersStore() {
+  if (!global.mockUsersStore) {
+    global.mockUsersStore = {
+      'admin': {
+        id: 'admin-user',
+        username: 'admin',
+        password: hashPassword('admin123'),
+        name: 'Admin',
+        email: 'admin@gamersden.com',
+        points: 0,
+        totalSpent: 0,
+        createdAt: new Date(),
+      }
+    };
+  }
+  return global.mockUsersStore;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +60,8 @@ export async function POST(request: NextRequest) {
     }
 
     const hashedPassword = hashPassword(password);
-    
+    const mockUsers = getMockUsersStore();
+
     // Try database first
     try {
       // Check if user already exists
@@ -65,6 +87,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Also add to mock store for this session
+      mockUsers[username] = {
+        id: user.id,
+        username: user.username,
+        password: hashedPassword,
+        name: user.name || username,
+        email: user.email || undefined,
+        phone: user.phone || undefined,
+        points: user.points,
+        totalSpent: user.totalSpent,
+        createdAt: user.createdAt || new Date(),
+      };
+
       // Set session cookie
       const cookieStore = await cookies();
       cookieStore.set('session_user_id', user.id, {
@@ -87,11 +122,11 @@ export async function POST(request: NextRequest) {
           createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
         },
       });
-    } catch (dbError) {
-      console.log('Database unavailable for signup, using mock');
+    } catch {
+      console.log('Database unavailable for signup, using mock store');
       
       // Check mock users
-      if (mockUsers.has(username)) {
+      if (mockUsers[username]) {
         return NextResponse.json(
           { error: 'Username already taken' },
           { status: 400 }
@@ -104,12 +139,14 @@ export async function POST(request: NextRequest) {
         username,
         password: hashedPassword,
         name: username,
+        email: email,
+        phone: phone,
         points: 0,
         totalSpent: 0,
         createdAt: new Date(),
       };
       
-      mockUsers.set(username, mockUser);
+      mockUsers[username] = mockUser;
 
       // Set session cookie
       const cookieStore = await cookies();
@@ -126,6 +163,8 @@ export async function POST(request: NextRequest) {
           id: mockUser.id,
           username: mockUser.username,
           name: mockUser.name,
+          email: mockUser.email,
+          phone: mockUser.phone,
           points: mockUser.points,
           totalSpent: mockUser.totalSpent,
           createdAt: mockUser.createdAt.toISOString(),
