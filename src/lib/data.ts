@@ -1,6 +1,11 @@
 import { db } from '@/lib/db';
 import { Console, Game, Announcement, Event, PricingPackage, GalleryItem } from '@prisma/client';
 
+// Simple ensureDatabase - just a placeholder
+export async function ensureDatabase() {
+  // Database schema is created during build
+}
+
 // Seed the database with initial data
 export async function seedDatabase() {
   // Check if already seeded

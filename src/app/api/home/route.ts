@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getConsoles, getFeaturedGames, getAnnouncements, getUpcomingEvents, getPricingPackages, seedDatabase } from '@/lib/data';
+import { getConsoles, getFeaturedGames, getAnnouncements, getUpcomingEvents, getPricingPackages, seedDatabase, ensureDatabase } from '@/lib/data';
 
 export async function GET() {
   try {
-    // Seed database on first call
+    // Ensure database schema exists and seed data
+    await ensureDatabase();
     await seedDatabase();
     
     const [consoles, games, announcements, events, packages] = await Promise.all([
