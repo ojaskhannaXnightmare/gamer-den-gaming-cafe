@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ['...', 'openssl']
+
+[phases.install]
+cmd = 'bun install --frozen-lockfile'
+
+[phases.build]
+cmd = 'bunx prisma generate && bun run db:push && bun run build'
+
+[start]
+cmd = 'bun .next/standalone/server.js'
+
+[variables]
+NODE_ENV = 'production'
+PORT = '3000'
