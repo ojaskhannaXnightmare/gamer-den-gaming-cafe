@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+
+// Static announcements for admin panel
+const staticAnnouncements = [
+  { id: 'ann-1', title: '🎮 Weekend Special: 20% OFF!', content: 'Book your gaming session this weekend and get 20% off on all consoles!', type: 'offer', isActive: true, startDate: null, endDate: null, createdAt: new Date('2024-01-01') },
+  { id: 'ann-2', title: '🏆 Tekken Tournament Coming!', content: 'Join our monthly Tekken tournament this Saturday. Cash prizes for winners!', type: 'tournament', isActive: true, startDate: null, endDate: null, createdAt: new Date('2024-01-02') },
+  { id: 'ann-3', title: '🆕 New Games Added!', content: 'Spider-Man 2, EA Sports FC 25, Tekken 8 now available on PS5!', type: 'info', isActive: true, startDate: null, endDate: null, createdAt: new Date('2024-01-03') },
+];
+
+// Global store for runtime announcements
+declare global {
+  var adminAnnouncementsStore: typeof staticAnnouncements | undefined;
+}
+
+function getAnnouncementsStore() {
+  if (!global.adminAnnouncementsStore) {
+    global.adminAnnouncementsStore = [...staticAnnouncements];
+  }
+  return global.adminAnnouncementsStore;
+}
 
 function checkAdmin(request: NextRequest) {
   const sessionId = request.cookies.get('admin_session')?.value;
@@ -12,14 +30,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const announcements = await db.announcement.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-
+    const announcements = getAnnouncementsStore();
     return NextResponse.json({ announcements });
   } catch (error) {
     console.error('Error fetching announcements:', error);
-    return NextResponse.json({ error: 'Failed to fetch announcements' }, { status: 500 });
+    return NextResponse.json({ announcements: [] });
   }
 }
 
@@ -32,23 +47,26 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const { title, content, type, isActive, startDate, endDate } = data;
 
-    // Validate required fields
     if (!title || !content) {
       return NextResponse.json({ error: 'Missing required fields: title and content are required' }, { status: 400 });
     }
 
-    const announcement = await db.announcement.create({
-      data: {
-        title,
-        content,
-        type: type || 'info',
-        isActive: isActive ?? true,
-        startDate: startDate || null,
-        endDate: endDate || null,
-      },
-    });
+    const announcements = getAnnouncementsStore();
 
-    return NextResponse.json({ success: true, announcement });
+    const newAnnouncement = {
+      id: `ann-${Date.now()}`,
+      title,
+      content,
+      type: type || 'info',
+      isActive: isActive ?? true,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      createdAt: new Date(),
+    };
+
+    announcements.push(newAnnouncement);
+
+    return NextResponse.json({ success: true, announcement: newAnnouncement });
   } catch (error) {
     console.error('Error creating announcement:', error);
     return NextResponse.json({ error: 'Failed to create announcement' }, { status: 500 });
@@ -68,12 +86,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Announcement ID required' }, { status: 400 });
     }
 
-    const announcement = await db.announcement.update({
-      where: { id },
-      data: updateData,
-    });
+    const announcements = getAnnouncementsStore();
+    const annIndex = announcements.findIndex(a => a.id === id);
 
-    return NextResponse.json({ success: true, announcement });
+    if (annIndex === -1) {
+      return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
+    }
+
+    announcements[annIndex] = {
+      ...announcements[annIndex],
+      ...updateData,
+    };
+
+    return NextResponse.json({ success: true, announcement: announcements[annIndex] });
   } catch (error) {
     console.error('Error updating announcement:', error);
     return NextResponse.json({ error: 'Failed to update announcement' }, { status: 500 });
@@ -93,7 +118,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Announcement ID required' }, { status: 400 });
     }
 
-    await db.announcement.delete({ where: { id } });
+    const announcements = getAnnouncementsStore();
+    const annIndex = announcements.findIndex(a => a.id === id);
+
+    if (annIndex !== -1) {
+      announcements.splice(annIndex, 1);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

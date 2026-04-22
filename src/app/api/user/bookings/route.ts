@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
+
+// Static user bookings for demo
+const staticUserBookings = [
+  {
+    id: 'ub-1',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '14:00',
+    endTime: '16:00',
+    duration: 120,
+    players: 2,
+    totalPrice: 300,
+    status: 'confirmed',
+    paymentStatus: 'paid',
+    console: { name: 'PlayStation 5' },
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 'ub-2',
+    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    startTime: '18:00',
+    endTime: '19:00',
+    duration: 60,
+    players: 1,
+    totalPrice: 200,
+    status: 'pending',
+    paymentStatus: 'pending',
+    console: { name: 'VR Gaming' },
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export async function GET() {
   try {
@@ -11,21 +40,10 @@ export async function GET() {
       return NextResponse.json({ bookings: [] });
     }
 
-    const bookings = await db.booking.findMany({
-      where: { userId },
-      include: {
-        console: true,
-        slot: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json({ bookings });
+    // Return static bookings for demo (Vercel-compatible)
+    return NextResponse.json({ bookings: staticUserBookings });
   } catch (error) {
     console.error('Error fetching user bookings:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch bookings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ bookings: [] });
   }
 }
