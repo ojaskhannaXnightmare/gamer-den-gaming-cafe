@@ -2,7 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -30,12 +32,12 @@ model User {
 // Gaming Console Types
 model Console {
   id          String   @id @default(cuid())
-  name        String   // PS5, PS4, VR, Projector
+  name        String
   slug        String   @unique
   description String?
   pricePerHour Float
   image       String?
-  features    String?  // JSON string of features
+  features    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -48,14 +50,14 @@ model Slot {
   id          String   @id @default(cuid())
   consoleId   String
   console     Console  @relation(fields: [consoleId], references: [id])
-  startTime   String   // HH:mm format
-  endTime     String   // HH:mm format
+  startTime   String
+  endTime     String
   isAvailable Boolean  @default(true)
-  dayOfWeek   Int?     // 0-6 (Sunday-Saturday), null for all days
+  dayOfWeek   Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   bookings    Booking[]
-  
+
   @@unique([consoleId, startTime, dayOfWeek])
 }
 
@@ -65,8 +67,8 @@ model Game {
   title       String
   slug        String   @unique
   description String?
-  genre       String   // Action, Racing, Sports, etc.
-  consoleType String?  // PS5, PS4, Both, VR
+  genre       String
+  consoleType String?
   image       String?
   rating      Float?
   isFeatured  Boolean  @default(false)
@@ -87,15 +89,15 @@ model Booking {
   customerName  String
   customerPhone String
   customerEmail String?
-  date          String    // YYYY-MM-DD format
+  date          String
   startTime     String
   endTime       String
-  duration      Int       // in minutes
+  duration      Int
   players       Int       @default(1)
   totalPrice    Float
-  status        String    @default("pending") // pending, confirmed, completed, cancelled
+  status        String    @default("pending")
   paymentMethod String?
-  paymentStatus String    @default("pending") // pending, paid, failed, refunded
+  paymentStatus String    @default("pending")
   transactionId String?
   notes         String?
   createdAt     DateTime  @default(now())
@@ -104,22 +106,22 @@ model Booking {
 
 // Events and Tournaments
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  description String?
-  gameName    String?
-  date        String   // YYYY-MM-DD
-  time        String   // HH:mm
-  endDate     String?
-  prize       String?
-  maxPlayers  Int?
-  currentPlayers Int   @default(0)
-  price       Float    @default(0)
-  image       String?
-  status      String   @default("upcoming") // upcoming, ongoing, completed, cancelled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  description   String?
+  gameName      String?
+  date          String
+  time          String
+  endDate       String?
+  prize         String?
+  maxPlayers    Int?
+  currentPlayers Int    @default(0)
+  price         Float    @default(0)
+  image         String?
+  status        String   @default("upcoming")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // Gallery Images/Videos
@@ -127,10 +129,10 @@ model GalleryItem {
   id          String   @id @default(cuid())
   title       String?
   description String?
-  type        String   // image, video
+  type        String
   url         String
   thumbnail   String?
-  category    String?  // interior, events, gaming, etc.
+  category    String?
   isFeatured  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -138,15 +140,15 @@ model GalleryItem {
 
 // Announcements / Updates
 model Announcement {
-  id          String   @id @default(cuid())
-  title       String
-  content     String
-  type        String   @default("info") // info, offer, tournament, event
-  isActive    Boolean  @default(true)
-  startDate   String?
-  endDate     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  type      String   @default("info")
+  isActive  Boolean  @default(true)
+  startDate String?
+  endDate   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Pricing Packages
@@ -156,9 +158,9 @@ model PricingPackage {
   description String?
   consoleType String
   price       Float
-  duration    Int      // in minutes
-  discount    Float?   // percentage
-  includes    String?  // JSON string of what's included
+  duration    Int
+  discount    Float?
+  includes    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -172,7 +174,7 @@ model ContactMessage {
   phone     String?
   subject   String
   message   String
-  status    String   @default("new") // new, read, replied, resolved
+  status    String   @default("new")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
