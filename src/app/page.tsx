@@ -670,9 +670,19 @@ function ProfileSection() {
                             <Monitor className="w-5 h-5 text-neon-cyan" />
                             <span className="font-display font-bold text-white">{booking.console.name}</span>
                           </div>
-                          <Badge className={getStatusColor(booking.status)}>
-                            {booking.status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className={cn(
+                              booking.paymentStatus === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                              booking.paymentStatus === 'paid' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                              booking.paymentStatus === 'failed' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                              booking.paymentStatus === 'refunded' && 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                            )}>
+                              {booking.paymentStatus}
+                            </Badge>
+                            <Badge className={getStatusColor(booking.status)}>
+                              {booking.status}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm text-gray-400">
                           <div className="flex items-center gap-1">
@@ -991,6 +1001,16 @@ function BookingSection({ consoles }: { consoles: Console[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingId, setBookingId] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [upiConfig, setUpiConfig] = useState<{ upiId: string; businessName: string }>({ upiId: '', businessName: '' });
+
+  // Fetch UPI config
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => setUpiConfig(data))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (selectedConsole && selectedDate) {
@@ -1001,39 +1021,71 @@ function BookingSection({ consoles }: { consoles: Console[] }) {
     }
   }, [selectedConsole, selectedDate]);
 
+  // Pre-fill user details when logged in
+  useEffect(() => {
+    if (user) {
+      setCustomerInfo(
+        user.name || user.username,
+        user.phone || '',
+        user.email || ''
+      );
+    }
+  }, [user, setCustomerInfo]);
+
   const selectedConsoleData = consoles.find(c => c.id === selectedConsole);
   const totalPrice = selectedConsoleData ? (selectedConsoleData.pricePerHour / 60) * duration * players : 0;
 
-  const handleSubmit = async () => {
+  const handlePayment = async (method: string, upiLink?: string) => {
     if (!selectedConsole || !selectedDate || !selectedSlot || !customerName || !customerPhone) return;
     
+    setSelectedPaymentMethod(method);
     setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          consoleId: selectedConsole,
-          slotId: selectedSlot,
-          customerName,
-          customerPhone,
-          customerEmail,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          duration,
-          players,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setBookingId(data.booking.id);
-        setBookingComplete(true);
-      }
-    } catch (error) {
-      console.error('Booking failed:', error);
-    } finally {
-      setIsSubmitting(false);
+
+    if (upiLink) {
+      // Open UPI app
+      const link = document.createElement('a');
+      link.href = upiLink;
+      link.click();
     }
+
+    // Submit booking after a short delay
+    setTimeout(async () => {
+      try {
+        const transactionRef = `BK${Date.now().toString(36).toUpperCase()}`;
+        const response = await fetch('/api/booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            consoleId: selectedConsole,
+            slotId: selectedSlot,
+            customerName,
+            customerPhone,
+            customerEmail,
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            duration,
+            players,
+            paymentMethod: method,
+            transactionId: transactionRef,
+            userId: user?.id,
+          }),
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          setBookingId(data.booking.id);
+          setBookingComplete(true);
+        }
+      } catch (error) {
+        console.error('Booking failed:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, upiLink ? 1500 : 500);
+  };
+
+  const handleSubmit = async () => {
+    // Default to Cash payment when clicking old-style payment buttons
+    await handlePayment('Cash');
   };
 
   const steps = [
@@ -1053,17 +1105,43 @@ function BookingSection({ consoles }: { consoles: Console[] }) {
             <span className="text-white">Reserve Your </span>
             <span className="neon-text-cyan">Gaming Spot</span>
           </h2>
-          {!user && (
-            <p className="text-neon-purple mt-2">
-              <button onClick={() => useAuthStore.getState().openAuthModal('login')} className="underline hover:text-neon-cyan">
-                Login
-              </button>
-              {' '}to track your bookings!
-            </p>
-          )}
         </motion.div>
 
         <div className="max-w-4xl mx-auto">
+          {!user ? (
+            <Card className="cyber-card p-12 text-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-6"
+              >
+                <div className="w-24 h-24 mx-auto rounded-full bg-neon-purple/20 flex items-center justify-center">
+                  <UserCircle className="w-12 h-12 text-neon-purple" />
+                </div>
+                <h3 className="font-display text-2xl font-bold text-white">Login Required</h3>
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Please login or create an account to book your gaming session. This helps us track your bookings and reward you with points!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+                  <Button
+                    onClick={() => useAuthStore.getState().openAuthModal('login')}
+                    className="btn-neon bg-neon-cyan text-black font-display"
+                  >
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Login
+                  </Button>
+                  <Button
+                    onClick={() => useAuthStore.getState().openAuthModal('signup')}
+                    variant="outline"
+                    className="border-neon-purple/50 text-neon-purple hover:bg-neon-purple/10 font-display"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Sign Up
+                  </Button>
+                </div>
+              </motion.div>
+            </Card>
+          ) : (
           <Card className="cyber-card overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               {steps.map((s, index) => (
@@ -1218,15 +1296,99 @@ function BookingSection({ consoles }: { consoles: Console[] }) {
               {step === 'payment' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                   <h3 className="font-display text-xl font-bold text-white mb-4">Payment Method</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['UPI', 'Paytm', 'Cash', 'Card'].map((method) => (
-                      <Button key={method} variant="outline" className="h-20 border-neon-purple/30 text-gray-300 hover:border-neon-cyan flex flex-col gap-1"
-                        onClick={handleSubmit} disabled={isSubmitting}>
-                        {isSubmitting ? <div className="w-5 h-5 border-2 border-neon-cyan border-t-transparent rounded-full animate-spin" /> : <><Zap className="w-5 h-5" /><span className="text-xs">{method}</span></>}
-                      </Button>
-                    ))}
+                  
+                  {/* Booking Summary */}
+                  <div className="p-4 bg-white/5 rounded-lg border border-neon-cyan/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Total Amount:</span>
+                      <span className="text-2xl font-bold text-neon-cyan">₹{totalPrice.toFixed(0)}</span>
+                    </div>
                   </div>
-                  <div className="text-center text-gray-400 text-sm">Pay at the venue or use online payment</div>
+
+                  {/* UPI Payment Options */}
+                  <div className="text-gray-400 text-sm uppercase tracking-wider">Pay with UPI App</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { id: 'gpay', name: 'Google Pay', deepLink: (upiId: string, amount: number, txn: string, name: string) => 
+                        `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&tr=${txn}&tn=${encodeURIComponent('Gaming Session')}&cu=INR` },
+                      { id: 'phonepe', name: 'PhonePe', deepLink: (upiId: string, amount: number, txn: string, name: string) => 
+                        `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&tr=${txn}&tn=${encodeURIComponent('Gaming Session')}&cu=INR` },
+                      { id: 'paytm', name: 'Paytm', deepLink: (upiId: string, amount: number, txn: string, name: string) => 
+                        `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&tr=${txn}&tn=${encodeURIComponent('Gaming Session')}&cu=INR` },
+                      { id: 'bhim', name: 'BHIM UPI', deepLink: (upiId: string, amount: number, txn: string, name: string) => 
+                        `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&tr=${txn}&tn=${encodeURIComponent('Gaming Session')}&cu=INR` },
+                    ].map((app) => {
+                      const transactionRef = `BK${Date.now().toString(36).toUpperCase()}`;
+                      const appLink = app.deepLink(upiConfig.upiId, totalPrice, transactionRef, upiConfig.businessName);
+
+                      return (
+                        <motion.button
+                          key={app.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handlePayment(app.id, appLink)}
+                          disabled={isSubmitting}
+                          className={cn(
+                            'p-4 rounded-lg border border-white/10 bg-white/5 hover:border-neon-cyan/50 transition-all text-center',
+                            'disabled:opacity-50 disabled:cursor-not-allowed'
+                          )}
+                        >
+                          {isSubmitting && selectedPaymentMethod === app.id ? (
+                            <div className="w-5 h-5 border-2 border-neon-cyan border-t-transparent rounded-full animate-spin mx-auto" />
+                          ) : (
+                            <>
+                              <Zap className="w-5 h-5 mx-auto text-neon-cyan" />
+                              <div className="font-display font-bold text-white text-sm mt-1">{app.name}</div>
+                            </>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-white/10"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-gray-500">Or pay at venue</span>
+                    </div>
+                  </div>
+
+                  {/* Pay at Venue */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-16 border-neon-purple/30 text-gray-300 hover:border-neon-cyan flex flex-col gap-1"
+                      onClick={() => handlePayment('Cash')}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && selectedPaymentMethod === 'Cash' ? (
+                        <div className="w-5 h-5 border-2 border-neon-cyan border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span className="text-lg">💵</span>
+                          <span className="text-xs">Cash</span>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-16 border-neon-purple/30 text-gray-300 hover:border-neon-cyan flex flex-col gap-1"
+                      onClick={() => handlePayment('Card')}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && selectedPaymentMethod === 'Card' ? (
+                        <div className="w-5 h-5 border-2 border-neon-cyan border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span className="text-lg">💳</span>
+                          <span className="text-xs">Card at Venue</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
                   <div className="flex justify-between pt-4">
                     <Button variant="outline" onClick={prevStep} className="border-white/20 text-gray-300"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
                   </div>
@@ -1247,6 +1409,7 @@ function BookingSection({ consoles }: { consoles: Console[] }) {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </section>

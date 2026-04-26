@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getConsoles, getAvailableSlots } from '@/lib/data';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const cookieStore = await cookies();
+    const sessionUserId = cookieStore.get('session_user_id')?.value;
+
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required. Please login to book.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       consoleId,
@@ -14,6 +23,9 @@ export async function POST(request: NextRequest) {
       date,
       duration,
       players,
+      paymentMethod,
+      transactionId,
+      userId,
     } = body;
 
     // Validate required fields
@@ -55,6 +67,9 @@ export async function POST(request: NextRequest) {
     const endMinutes = (duration % 60) > 0 ? 30 : 0;
     const endTime = `${endHour.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     
+    // Use session user ID for booking (always use authenticated user)
+    const bookingUserId = sessionUserId;
+    
     // Try to create booking in database, fallback to mock response
     try {
       const booking = await db.booking.create({
@@ -71,7 +86,10 @@ export async function POST(request: NextRequest) {
           players,
           totalPrice,
           status: 'pending',
-          paymentStatus: 'pending',
+          paymentStatus: paymentMethod ? 'paid' : 'pending',
+          paymentMethod: paymentMethod || null,
+          transactionId: transactionId || null,
+          userId: bookingUserId,
         },
       });
       
@@ -96,7 +114,10 @@ export async function POST(request: NextRequest) {
         players,
         totalPrice,
         status: 'pending',
-        paymentStatus: 'pending',
+        paymentStatus: paymentMethod ? 'paid' : 'pending',
+        paymentMethod: paymentMethod || null,
+        transactionId: transactionId || null,
+        userId: bookingUserId,
         createdAt: new Date(),
       };
       
@@ -138,5 +159,47 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching bookings:', error);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
+  }
+}
+
+// PATCH - Update booking status and payment status
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { bookingId, status, paymentStatus, paymentMethod, transactionId } = body;
+
+    if (!bookingId) {
+      return NextResponse.json({ error: 'Booking ID is required' }, { status: 400 });
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {};
+    if (status) updateData.status = status;
+    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+    if (paymentMethod) updateData.paymentMethod = paymentMethod;
+    if (transactionId) updateData.transactionId = transactionId;
+
+    try {
+      const booking = await db.booking.update({
+        where: { id: bookingId },
+        data: updateData,
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        booking,
+        message: 'Booking updated successfully' 
+      });
+    } catch {
+      // Database not available - return mock success
+      return NextResponse.json({ 
+        success: true, 
+        booking: { id: bookingId, ...updateData },
+        message: 'Booking updated successfully (mock)' 
+      });
+    }
+  } catch (error) {
+    console.error('Error updating booking:', error);
+    return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
   }
 }

@@ -82,6 +82,7 @@ interface Booking {
   id: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string | null;
   date: string;
   startTime: string;
   endTime: string;
@@ -90,7 +91,14 @@ interface Booking {
   totalPrice: number;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string | null;
+  transactionId?: string | null;
   console: { name: string };
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+  } | null;
   createdAt: string;
 }
 
@@ -543,6 +551,52 @@ export default function AdminPanel() {
     }
   };
 
+  // Update booking status
+  const updateBookingStatus = async (bookingId: string, status: string) => {
+    try {
+      const response = await fetch('/api/booking', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, status }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.error || 'Failed to update status');
+        return;
+      }
+
+      fetchData();
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert('Failed to update status');
+    }
+  };
+
+  // Update booking payment status
+  const updateBookingPayment = async (bookingId: string, paymentStatus: string) => {
+    try {
+      const response = await fetch('/api/booking', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, paymentStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.error || 'Failed to update payment status');
+        return;
+      }
+
+      fetchData();
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert('Failed to update payment status');
+    }
+  };
+
   const formFields: Record<typeof formType, FormField[]> = {
     console: [
       { name: 'name', label: 'Console Name', type: 'text', required: true, placeholder: 'e.g., PlayStation 5' },
@@ -696,7 +750,7 @@ export default function AdminPanel() {
                   <TabsContent value="bookings" className="mt-0">
                     <Card className="cyber-card">
                       <CardHeader className="flex-row items-center justify-between">
-                        <CardTitle className="text-white font-display">Recent Bookings</CardTitle>
+                        <CardTitle className="text-white font-display">Recent Bookings - Verification Panel</CardTitle>
                       </CardHeader>
                       <CardContent>
                         {isLoading ? (
@@ -706,55 +760,146 @@ export default function AdminPanel() {
                         ) : bookings.length === 0 ? (
                           <p className="text-center text-gray-500 py-8">No bookings found</p>
                         ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-white/10 text-left">
-                                  <th className="p-2 text-gray-400">Customer</th>
-                                  <th className="p-2 text-gray-400">Console</th>
-                                  <th className="p-2 text-gray-400">Date</th>
-                                  <th className="p-2 text-gray-400">Time</th>
-                                  <th className="p-2 text-gray-400">Amount</th>
-                                  <th className="p-2 text-gray-400">Status</th>
-                                  <th className="p-2 text-gray-400">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {bookings.map((booking) => (
-                                  <tr key={booking.id} className="border-b border-white/5 hover:bg-white/5">
-                                    <td className="p-2">
-                                      <div className="text-white">{booking.customerName}</div>
-                                      <div className="text-gray-500 text-xs">{booking.customerPhone}</div>
-                                    </td>
-                                    <td className="p-2 text-white">{booking.console.name}</td>
-                                    <td className="p-2 text-gray-300">{booking.date}</td>
-                                    <td className="p-2 text-gray-300">{booking.startTime} - {booking.endTime}</td>
-                                    <td className="p-2 text-neon-cyan font-bold">₹{booking.totalPrice}</td>
-                                    <td className="p-2">
+                          <ScrollArea className="h-[calc(90vh-350px)]">
+                            <div className="space-y-4 pr-2">
+                              {bookings.map((booking) => (
+                                <div key={booking.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
+                                  {/* Header Row */}
+                                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-neon-cyan/20 flex items-center justify-center">
+                                        <Monitor className="w-5 h-5 text-neon-cyan" />
+                                      </div>
+                                      <div>
+                                        <div className="font-display font-bold text-white">{booking.console.name}</div>
+                                        <div className="text-gray-400 text-xs">ID: {booking.id.slice(0, 8)}...</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
                                       <Badge className={cn(
-                                        booking.status === 'pending' && 'bg-yellow-500/20 text-yellow-400',
-                                        booking.status === 'confirmed' && 'bg-neon-cyan/20 text-neon-cyan',
-                                        booking.status === 'completed' && 'bg-green-500/20 text-green-400',
-                                        booking.status === 'cancelled' && 'bg-red-500/20 text-red-400',
+                                        booking.status === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                                        booking.status === 'confirmed' && 'bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30',
+                                        booking.status === 'completed' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                                        booking.status === 'cancelled' && 'bg-red-500/20 text-red-400 border-red-500/30',
                                       )}>
                                         {booking.status}
                                       </Badge>
-                                    </td>
-                                    <td className="p-2">
+                                      <Badge className={cn(
+                                        booking.paymentStatus === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                                        booking.paymentStatus === 'paid' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                                        booking.paymentStatus === 'failed' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                                        booking.paymentStatus === 'refunded' && 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                                      )}>
+                                        {booking.paymentStatus}
+                                      </Badge>
+                                    </div>
+                                  </div>
+
+                                  {/* Details Grid */}
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                    {/* Customer Info */}
+                                    <div className="p-2 bg-white/5 rounded">
+                                      <div className="text-gray-400 text-xs mb-1">Customer</div>
+                                      <div className="text-white font-medium">{booking.customerName}</div>
+                                      <div className="text-gray-400 text-xs">{booking.customerPhone}</div>
+                                      {booking.customerEmail && (
+                                        <div className="text-gray-500 text-xs truncate">{booking.customerEmail}</div>
+                                      )}
+                                    </div>
+
+                                    {/* User Account */}
+                                    <div className="p-2 bg-white/5 rounded">
+                                      <div className="text-gray-400 text-xs mb-1">User Account</div>
+                                      {booking.user ? (
+                                        <>
+                                          <div className="text-neon-cyan font-medium">@{booking.user.username}</div>
+                                          <div className="text-gray-500 text-xs truncate">{booking.user.email}</div>
+                                        </>
+                                      ) : (
+                                        <div className="text-gray-500">Guest Booking</div>
+                                      )}
+                                    </div>
+
+                                    {/* Date & Time */}
+                                    <div className="p-2 bg-white/5 rounded">
+                                      <div className="text-gray-400 text-xs mb-1">Date & Time</div>
+                                      <div className="text-white font-medium">{booking.date}</div>
+                                      <div className="text-gray-400 text-xs">{booking.startTime} - {booking.endTime}</div>
+                                    </div>
+
+                                    {/* Duration & Players */}
+                                    <div className="p-2 bg-white/5 rounded">
+                                      <div className="text-gray-400 text-xs mb-1">Session</div>
+                                      <div className="text-white font-medium">{booking.duration} mins</div>
+                                      <div className="text-gray-400 text-xs">{booking.players} Player(s)</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Payment Info */}
+                                  <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-white/10">
+                                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                                      <div>
+                                        <span className="text-gray-400">Amount: </span>
+                                        <span className="text-neon-cyan font-bold text-lg">₹{booking.totalPrice}</span>
+                                      </div>
+                                      {booking.paymentMethod && (
+                                        <div>
+                                          <span className="text-gray-400">Method: </span>
+                                          <span className="text-white font-medium">{booking.paymentMethod}</span>
+                                        </div>
+                                      )}
+                                      {booking.transactionId && (
+                                        <div>
+                                          <span className="text-gray-400">Txn ID: </span>
+                                          <span className="text-gray-300 text-xs font-mono">{booking.transactionId}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Actions */}
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => updateBookingStatus(booking.id, 'confirmed')}
+                                        className="text-green-400 hover:bg-green-500/10 text-xs px-2"
+                                        title="Confirm Booking"
+                                      >
+                                        ✓ Confirm
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                        className="text-neon-cyan hover:bg-neon-cyan/10 text-xs px-2"
+                                        title="Mark as Completed"
+                                      >
+                                        ★ Complete
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => updateBookingPayment(booking.id, 'paid')}
+                                        className="text-green-400 hover:bg-green-500/10 text-xs px-2"
+                                        title="Mark as Paid"
+                                      >
+                                        💰 Paid
+                                      </Button>
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => handleDelete('booking', booking.id)}
                                         className="text-red-400 hover:bg-red-500/10"
+                                        title="Delete Booking"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </Button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
                         )}
                       </CardContent>
                     </Card>
