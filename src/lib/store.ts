@@ -142,7 +142,7 @@ export interface AdminState {
   isAdminPanelOpen: boolean;
   isAdminLoggedIn: boolean;
   adminUser: { id: string; username: string } | null;
-  adminTab: 'bookings' | 'consoles' | 'games' | 'events' | 'announcements' | 'pricing';
+  adminTab: 'bookings' | 'consoles' | 'games' | 'events' | 'announcements' | 'pricing' | 'users' | 'gallery' | 'contact';
   openAdminPanel: () => void;
   closeAdminPanel: () => void;
   setAdminUser: (user: { id: string; username: string } | null) => void;

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Monitor, Gamepad2, Calendar, Bell, DollarSign, Plus, Edit, Trash2,
-  X, LogIn, LogOut, Save, Loader2
+  Monitor, Gamepad2, Calendar, Bell, DollarSign, Plus, Trash2,
+  X, LogIn, LogOut, Save, Loader2, Users, Image, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,6 +102,40 @@ interface Booking {
   createdAt: string;
 }
 
+interface UserType {
+  id: string;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+  totalSpent: number;
+  isAdmin: boolean;
+  createdAt: string;
+  bookingCount: number;
+}
+
+interface GalleryItem {
+  id: string;
+  title: string | null;
+  description: string | null;
+  type: string;
+  url: string;
+  thumbnail: string | null;
+  category: string | null;
+  isFeatured: boolean;
+}
+
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
 // Form Dialog Component
 interface FormDialogProps {
   open: boolean;
@@ -125,10 +159,7 @@ interface FormField {
 }
 
 function FormDialog({ open, onClose, onSave, title, fields, initialData, isLoading }: FormDialogProps) {
-  // Create a stable key based on initialData
   const formKey = initialData ? JSON.stringify(initialData) : 'new';
-  
-  // Safety check for fields
   const safeFields = fields && Array.isArray(fields) ? fields : [];
   
   return (
@@ -161,12 +192,10 @@ function FormContent({ fields, initialData, isLoading, onSave, onClose }: {
     const initial: Record<string, unknown> = {};
     if (!fields || !Array.isArray(fields)) return initial;
     
-    // If we have initialData, use it
     if (initialData && typeof initialData === 'object') {
       return { ...initialData };
     }
     
-    // Otherwise, create default values
     fields.forEach(field => {
       if (field.type === 'checkbox') {
         initial[field.name] = false;
@@ -211,7 +240,6 @@ function FormContent({ fields, initialData, isLoading, onSave, onClose }: {
     await onSave(formData);
   };
 
-  // Safety check for fields
   if (!fields || !Array.isArray(fields)) {
     return null;
   }
@@ -243,81 +271,81 @@ function FormContent({ fields, initialData, isLoading, onSave, onClose }: {
                 onChange={(e) => handleChange(field.name, parseFloat(e.target.value) || 0)}
                 placeholder={field.placeholder}
                 min={field.min}
-                    step={field.step}
-                    className="bg-white/5 border-neon-purple/30 text-white"
-                  />
-                )}
-                
-                {field.type === 'textarea' && (
-                  <Textarea
-                    value={(formData[field.name] as string) || ''}
-                    onChange={(e) => handleChange(field.name, e.target.value)}
-                    placeholder={field.placeholder}
-                    className="bg-white/5 border-neon-purple/30 text-white min-h-[100px]"
-                  />
-                )}
-                
-                {field.type === 'select' && field.options && (
-                  <Select
-                    value={(formData[field.name] as string) || ''}
-                    onValueChange={(value) => handleChange(field.name, value)}
-                  >
-                    <SelectTrigger className="bg-white/5 border-neon-purple/30 text-white">
-                      <SelectValue placeholder={field.placeholder || 'Select...'} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-neon-purple/30">
-                      {field.options.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value} className="text-white hover:bg-neon-cyan/20">
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {field.type === 'checkbox' && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={(formData[field.name] as boolean) || false}
-                      onChange={(e) => handleChange(field.name, e.target.checked)}
-                      className="w-5 h-5 rounded border-neon-purple/30 bg-white/5 text-neon-cyan focus:ring-neon-cyan"
-                    />
-                    <span className="text-gray-300">{field.label}</span>
-                  </label>
-                )}
-                
-                {errors[field.name] && (
-                  <p className="text-red-400 text-xs mt-1">{errors[field.name]}</p>
-                )}
-              </div>
-            ))}
+                step={field.step}
+                className="bg-white/5 border-neon-purple/30 text-white"
+              />
+            )}
+            
+            {field.type === 'textarea' && (
+              <Textarea
+                value={(formData[field.name] as string) || ''}
+                onChange={(e) => handleChange(field.name, e.target.value)}
+                placeholder={field.placeholder}
+                className="bg-white/5 border-neon-purple/30 text-white min-h-[100px]"
+              />
+            )}
+            
+            {field.type === 'select' && field.options && (
+              <Select
+                value={(formData[field.name] as string) || ''}
+                onValueChange={(value) => handleChange(field.name, value)}
+              >
+                <SelectTrigger className="bg-white/5 border-neon-purple/30 text-white">
+                  <SelectValue placeholder={field.placeholder || 'Select...'} />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-neon-purple/30">
+                  {field.options.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-white hover:bg-neon-cyan/20">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {field.type === 'checkbox' && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(formData[field.name] as boolean) || false}
+                  onChange={(e) => handleChange(field.name, e.target.checked)}
+                  className="w-5 h-5 rounded border-neon-purple/30 bg-white/5 text-neon-cyan focus:ring-neon-cyan"
+                />
+                <span className="text-gray-300">{field.label}</span>
+              </label>
+            )}
+            
+            {errors[field.name] && (
+              <p className="text-red-400 text-xs mt-1">{errors[field.name]}</p>
+            )}
           </div>
-          
-          <DialogFooter className="mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="border-white/20 text-gray-300"
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="btn-neon bg-neon-cyan text-black font-display"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
+        ))}
+      </div>
+      
+      <DialogFooter className="mt-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="border-white/20 text-gray-300"
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          className="btn-neon bg-neon-cyan text-black font-display"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Save
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
 
@@ -430,12 +458,15 @@ export default function AdminPanel() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [pricing, setPricing] = useState<PricingPackage[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Form states
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
-  const [formType, setFormType] = useState<'console' | 'game' | 'event' | 'announcement' | 'pricing'>('console');
+  const [formType, setFormType] = useState<'console' | 'game' | 'event' | 'announcement' | 'pricing' | 'gallery'>('console');
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch data when tab changes
@@ -455,6 +486,9 @@ export default function AdminPanel() {
         events: '/api/admin/events',
         announcements: '/api/admin/announcements',
         pricing: '/api/admin/pricing',
+        users: '/api/admin/users',
+        gallery: '/api/admin/gallery',
+        contact: '/api/admin/contact',
       };
 
       const response = await fetch(endpoints[adminTab] || endpoints.bookings);
@@ -468,6 +502,9 @@ export default function AdminPanel() {
           case 'events': setEvents(data.events || []); break;
           case 'announcements': setAnnouncements(data.announcements || []); break;
           case 'pricing': setPricing(data.pricing || []); break;
+          case 'users': setUsers(data.users || []); break;
+          case 'gallery': setGallery(data.gallery || []); break;
+          case 'contact': setContactMessages(data.messages || []); break;
         }
       }
     } catch (error) {
@@ -492,6 +529,7 @@ export default function AdminPanel() {
         event: '/api/admin/events',
         announcement: '/api/admin/announcements',
         pricing: '/api/admin/pricing',
+        gallery: '/api/admin/gallery',
       };
 
       const isEdit = !!editingItem?.id;
@@ -532,6 +570,9 @@ export default function AdminPanel() {
         announcement: '/api/admin/announcements',
         pricing: '/api/admin/pricing',
         booking: '/api/admin/bookings',
+        user: '/api/admin/users',
+        gallery: '/api/admin/gallery',
+        contact: '/api/admin/contact',
       };
 
       const response = await fetch(`${endpoints[type]}?id=${id}`, {
@@ -594,6 +635,27 @@ export default function AdminPanel() {
     } catch (error) {
       console.error('Update failed:', error);
       alert('Failed to update payment status');
+    }
+  };
+
+  // Update contact message status
+  const updateMessageStatus = async (messageId: string, status: string) => {
+    try {
+      const response = await fetch('/api/admin/contact', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: messageId, status }),
+      });
+
+      if (!response.ok) {
+        alert('Failed to update status');
+        return;
+      }
+
+      fetchData();
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert('Failed to update status');
     }
   };
 
@@ -676,6 +738,23 @@ export default function AdminPanel() {
       { name: 'includes', label: 'Includes (comma-separated)', type: 'text', placeholder: 'Snacks, Drinks' },
       { name: 'isActive', label: 'Active', type: 'checkbox' },
     ],
+    gallery: [
+      { name: 'title', label: 'Title', type: 'text', placeholder: 'Image/Video title' },
+      { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Description...' },
+      { name: 'type', label: 'Type', type: 'select', required: true, options: [
+        { value: 'image', label: 'Image' },
+        { value: 'video', label: 'Video' },
+      ]},
+      { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'https://...' },
+      { name: 'thumbnail', label: 'Thumbnail URL', type: 'text', placeholder: 'https://...' },
+      { name: 'category', label: 'Category', type: 'select', options: [
+        { value: 'interior', label: 'Interior' },
+        { value: 'events', label: 'Events' },
+        { value: 'gaming', label: 'Gaming' },
+        { value: 'other', label: 'Other' },
+      ]},
+      { name: 'isFeatured', label: 'Featured', type: 'checkbox' },
+    ],
   };
 
   const handleLogout = async () => {
@@ -741,6 +820,15 @@ export default function AdminPanel() {
                   <TabsTrigger value="pricing" className="data-[state=active]:bg-neon-cyan/20 data-[state=active]:text-neon-cyan">
                     <DollarSign className="w-4 h-4 mr-1" /> Pricing
                   </TabsTrigger>
+                  <TabsTrigger value="users" className="data-[state=active]:bg-neon-cyan/20 data-[state=active]:text-neon-cyan">
+                    <Users className="w-4 h-4 mr-1" /> Users
+                  </TabsTrigger>
+                  <TabsTrigger value="gallery" className="data-[state=active]:bg-neon-cyan/20 data-[state=active]:text-neon-cyan">
+                    <Image className="w-4 h-4 mr-1" /> Gallery
+                  </TabsTrigger>
+                  <TabsTrigger value="contact" className="data-[state=active]:bg-neon-cyan/20 data-[state=active]:text-neon-cyan">
+                    <Mail className="w-4 h-4 mr-1" /> Contact
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -760,146 +848,98 @@ export default function AdminPanel() {
                         ) : bookings.length === 0 ? (
                           <p className="text-center text-gray-500 py-8">No bookings found</p>
                         ) : (
-                          <ScrollArea className="h-[calc(90vh-350px)]">
-                            <div className="space-y-4 pr-2">
-                              {bookings.map((booking) => (
-                                <div key={booking.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
-                                  {/* Header Row */}
-                                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-lg bg-neon-cyan/20 flex items-center justify-center">
-                                        <Monitor className="w-5 h-5 text-neon-cyan" />
-                                      </div>
-                                      <div>
-                                        <div className="font-display font-bold text-white">{booking.console.name}</div>
-                                        <div className="text-gray-400 text-xs">ID: {booking.id.slice(0, 8)}...</div>
-                                      </div>
+                          <div className="space-y-4">
+                            {bookings.map((booking) => (
+                              <div key={booking.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-neon-cyan/20 flex items-center justify-center">
+                                      <Monitor className="w-5 h-5 text-neon-cyan" />
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge className={cn(
-                                        booking.status === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-                                        booking.status === 'confirmed' && 'bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30',
-                                        booking.status === 'completed' && 'bg-green-500/20 text-green-400 border-green-500/30',
-                                        booking.status === 'cancelled' && 'bg-red-500/20 text-red-400 border-red-500/30',
-                                      )}>
-                                        {booking.status}
-                                      </Badge>
-                                      <Badge className={cn(
-                                        booking.paymentStatus === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-                                        booking.paymentStatus === 'paid' && 'bg-green-500/20 text-green-400 border-green-500/30',
-                                        booking.paymentStatus === 'failed' && 'bg-red-500/20 text-red-400 border-red-500/30',
-                                        booking.paymentStatus === 'refunded' && 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-                                      )}>
-                                        {booking.paymentStatus}
-                                      </Badge>
+                                    <div>
+                                      <div className="font-display font-bold text-white">{booking.console.name}</div>
+                                      <div className="text-gray-400 text-xs">ID: {booking.id.slice(0, 8)}...</div>
                                     </div>
                                   </div>
-
-                                  {/* Details Grid */}
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    {/* Customer Info */}
-                                    <div className="p-2 bg-white/5 rounded">
-                                      <div className="text-gray-400 text-xs mb-1">Customer</div>
-                                      <div className="text-white font-medium">{booking.customerName}</div>
-                                      <div className="text-gray-400 text-xs">{booking.customerPhone}</div>
-                                      {booking.customerEmail && (
-                                        <div className="text-gray-500 text-xs truncate">{booking.customerEmail}</div>
-                                      )}
-                                    </div>
-
-                                    {/* User Account */}
-                                    <div className="p-2 bg-white/5 rounded">
-                                      <div className="text-gray-400 text-xs mb-1">User Account</div>
-                                      {booking.user ? (
-                                        <>
-                                          <div className="text-neon-cyan font-medium">@{booking.user.username}</div>
-                                          <div className="text-gray-500 text-xs truncate">{booking.user.email}</div>
-                                        </>
-                                      ) : (
-                                        <div className="text-gray-500">Guest Booking</div>
-                                      )}
-                                    </div>
-
-                                    {/* Date & Time */}
-                                    <div className="p-2 bg-white/5 rounded">
-                                      <div className="text-gray-400 text-xs mb-1">Date & Time</div>
-                                      <div className="text-white font-medium">{booking.date}</div>
-                                      <div className="text-gray-400 text-xs">{booking.startTime} - {booking.endTime}</div>
-                                    </div>
-
-                                    {/* Duration & Players */}
-                                    <div className="p-2 bg-white/5 rounded">
-                                      <div className="text-gray-400 text-xs mb-1">Session</div>
-                                      <div className="text-white font-medium">{booking.duration} mins</div>
-                                      <div className="text-gray-400 text-xs">{booking.players} Player(s)</div>
-                                    </div>
-                                  </div>
-
-                                  {/* Payment Info */}
-                                  <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-white/10">
-                                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                                      <div>
-                                        <span className="text-gray-400">Amount: </span>
-                                        <span className="text-neon-cyan font-bold text-lg">₹{booking.totalPrice}</span>
-                                      </div>
-                                      {booking.paymentMethod && (
-                                        <div>
-                                          <span className="text-gray-400">Method: </span>
-                                          <span className="text-white font-medium">{booking.paymentMethod}</span>
-                                        </div>
-                                      )}
-                                      {booking.transactionId && (
-                                        <div>
-                                          <span className="text-gray-400">Txn ID: </span>
-                                          <span className="text-gray-300 text-xs font-mono">{booking.transactionId}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    {/* Actions */}
-                                    <div className="flex gap-1">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                                        className="text-green-400 hover:bg-green-500/10 text-xs px-2"
-                                        title="Confirm Booking"
-                                      >
-                                        ✓ Confirm
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => updateBookingStatus(booking.id, 'completed')}
-                                        className="text-neon-cyan hover:bg-neon-cyan/10 text-xs px-2"
-                                        title="Mark as Completed"
-                                      >
-                                        ★ Complete
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => updateBookingPayment(booking.id, 'paid')}
-                                        className="text-green-400 hover:bg-green-500/10 text-xs px-2"
-                                        title="Mark as Paid"
-                                      >
-                                        💰 Paid
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleDelete('booking', booking.id)}
-                                        className="text-red-400 hover:bg-red-500/10"
-                                        title="Delete Booking"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={cn(
+                                      booking.status === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                                      booking.status === 'confirmed' && 'bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30',
+                                      booking.status === 'completed' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                                      booking.status === 'cancelled' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                                    )}>
+                                      {booking.status}
+                                    </Badge>
+                                    <Badge className={cn(
+                                      booking.paymentStatus === 'pending' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                                      booking.paymentStatus === 'paid' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                                      booking.paymentStatus === 'failed' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                                      booking.paymentStatus === 'refunded' && 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                                    )}>
+                                      {booking.paymentStatus}
+                                    </Badge>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                  <div className="p-2 bg-white/5 rounded">
+                                    <div className="text-gray-400 text-xs mb-1">Customer</div>
+                                    <div className="text-white font-medium">{booking.customerName}</div>
+                                    <div className="text-gray-400 text-xs">{booking.customerPhone}</div>
+                                  </div>
+                                  <div className="p-2 bg-white/5 rounded">
+                                    <div className="text-gray-400 text-xs mb-1">User Account</div>
+                                    {booking.user ? (
+                                      <>
+                                        <div className="text-neon-cyan font-medium">@{booking.user.username}</div>
+                                        <div className="text-gray-500 text-xs truncate">{booking.user.email}</div>
+                                      </>
+                                    ) : (
+                                      <div className="text-gray-500">Guest Booking</div>
+                                    )}
+                                  </div>
+                                  <div className="p-2 bg-white/5 rounded">
+                                    <div className="text-gray-400 text-xs mb-1">Date & Time</div>
+                                    <div className="text-white font-medium">{booking.date}</div>
+                                    <div className="text-gray-400 text-xs">{booking.startTime} - {booking.endTime}</div>
+                                  </div>
+                                  <div className="p-2 bg-white/5 rounded">
+                                    <div className="text-gray-400 text-xs mb-1">Session</div>
+                                    <div className="text-white font-medium">{booking.duration} mins</div>
+                                    <div className="text-gray-400 text-xs">{booking.players} Player(s)</div>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-white/10">
+                                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                                    <div>
+                                      <span className="text-gray-400">Amount: </span>
+                                      <span className="text-neon-cyan font-bold text-lg">₹{booking.totalPrice}</span>
+                                    </div>
+                                    {booking.paymentMethod && (
+                                      <div>
+                                        <span className="text-gray-400">Method: </span>
+                                        <span className="text-white font-medium">{booking.paymentMethod}</span>
+                                      </div>
+                                    )}
+                                    {booking.transactionId && (
+                                      <div>
+                                        <span className="text-gray-400">Txn ID: </span>
+                                        <span className="text-gray-300 text-xs font-mono">{booking.transactionId}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="ghost" onClick={() => updateBookingStatus(booking.id, 'confirmed')} className="text-green-400 hover:bg-green-500/10 text-xs px-2">Confirm</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => updateBookingStatus(booking.id, 'completed')} className="text-neon-cyan hover:bg-neon-cyan/10 text-xs px-2">Complete</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => updateBookingPayment(booking.id, 'paid')} className="text-green-400 hover:bg-green-500/10 text-xs px-2">Paid</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => handleDelete('booking', booking.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </CardContent>
                     </Card>
@@ -910,10 +950,7 @@ export default function AdminPanel() {
                     <Card className="cyber-card">
                       <CardHeader className="flex-row items-center justify-between">
                         <CardTitle className="text-white font-display">Manage Consoles</CardTitle>
-                        <Button
-                          onClick={() => openForm('console')}
-                          className="btn-neon bg-neon-cyan text-black font-display"
-                        >
+                        <Button onClick={() => openForm('console')} className="btn-neon bg-neon-cyan text-black font-display">
                           <Plus className="w-4 h-4 mr-2" /> Add Console
                         </Button>
                       </CardHeader>
@@ -938,7 +975,7 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="flex gap-2 mt-4">
                                   <Button size="sm" variant="outline" onClick={() => openForm('console', console as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('console', console.id)} className="text-red-400">Delete</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('console', console.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </div>
                             ))}
@@ -965,23 +1002,21 @@ export default function AdminPanel() {
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {games.map((game) => (
-                              <div key={game.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-purple/30 transition-all">
+                              <div key={game.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <h4 className="font-display font-bold text-white">{game.title}</h4>
-                                    <div className="flex gap-2 mt-1">
-                                      <Badge className="bg-neon-purple/20 text-neon-purple">{game.genre}</Badge>
-                                      {game.rating && <span className="text-yellow-400 text-sm">★ {game.rating}</span>}
+                                    <p className="text-gray-400 text-sm mt-1">{game.genre}</p>
+                                    <div className="flex gap-2 mt-2">
+                                      {game.isFeatured && <Badge className="bg-neon-cyan/20 text-neon-cyan text-xs">Featured</Badge>}
+                                      {game.isPopular && <Badge className="bg-purple-500/20 text-purple-400 text-xs">Popular</Badge>}
                                     </div>
                                   </div>
-                                  <div className="flex gap-1">
-                                    {game.isFeatured && <Badge className="bg-neon-cyan/20 text-neon-cyan text-xs">Featured</Badge>}
-                                    {game.isPopular && <Badge className="bg-pink-500/20 text-pink-400 text-xs">Popular</Badge>}
-                                  </div>
+                                  {game.rating && <Badge className="bg-yellow-500/20 text-yellow-400">★ {game.rating}</Badge>}
                                 </div>
                                 <div className="flex gap-2 mt-4">
                                   <Button size="sm" variant="outline" onClick={() => openForm('game', game as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('game', game.id)} className="text-red-400">Delete</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('game', game.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </div>
                             ))}
@@ -1006,21 +1041,18 @@ export default function AdminPanel() {
                         ) : events.length === 0 ? (
                           <p className="text-center text-gray-500 py-8">No events found</p>
                         ) : (
-                          <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {events.map((event) => (
-                              <div key={event.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-pink-500/30 transition-all">
+                              <div key={event.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <h4 className="font-display font-bold text-white">{event.title}</h4>
-                                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-400">
-                                      <span>📅 {event.date} at {event.time}</span>
-                                      {event.prize && <span>🏆 {event.prize}</span>}
-                                      <span>👥 {event.currentPlayers}/{event.maxPlayers || '∞'}</span>
-                                      <span className="text-neon-cyan font-bold">₹{event.price}</span>
-                                    </div>
+                                    <p className="text-gray-400 text-sm mt-1">{event.gameName}</p>
+                                    <div className="text-neon-cyan font-bold mt-2">{event.date} at {event.time}</div>
+                                    {event.prize && <div className="text-yellow-400 text-sm">Prize: {event.prize}</div>}
                                   </div>
                                   <Badge className={cn(
-                                    event.status === 'upcoming' && 'bg-neon-cyan/20 text-neon-cyan',
+                                    event.status === 'upcoming' && 'bg-blue-500/20 text-blue-400',
                                     event.status === 'ongoing' && 'bg-green-500/20 text-green-400',
                                     event.status === 'completed' && 'bg-gray-500/20 text-gray-400',
                                     event.status === 'cancelled' && 'bg-red-500/20 text-red-400',
@@ -1030,7 +1062,7 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="flex gap-2 mt-4">
                                   <Button size="sm" variant="outline" onClick={() => openForm('event', event as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('event', event.id)} className="text-red-400">Delete</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('event', event.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </div>
                             ))}
@@ -1046,7 +1078,7 @@ export default function AdminPanel() {
                       <CardHeader className="flex-row items-center justify-between">
                         <CardTitle className="text-white font-display">Manage Announcements</CardTitle>
                         <Button onClick={() => openForm('announcement')} className="btn-neon bg-neon-cyan text-black font-display">
-                          <Plus className="w-4 h-4 mr-2" /> Add
+                          <Plus className="w-4 h-4 mr-2" /> Add Announcement
                         </Button>
                       </CardHeader>
                       <CardContent>
@@ -1056,29 +1088,30 @@ export default function AdminPanel() {
                           <p className="text-center text-gray-500 py-8">No announcements found</p>
                         ) : (
                           <div className="space-y-4">
-                            {announcements.map((announcement) => (
-                              <div key={announcement.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
+                            {announcements.map((ann) => (
+                              <div key={ann.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
                                 <div className="flex items-start justify-between">
                                   <div>
-                                    <h4 className="font-display font-bold text-white">{announcement.title}</h4>
-                                    <p className="text-gray-400 text-sm mt-1">{announcement.content}</p>
+                                    <h4 className="font-display font-bold text-white">{ann.title}</h4>
+                                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">{ann.content}</p>
                                   </div>
                                   <div className="flex gap-2">
                                     <Badge className={cn(
-                                      announcement.type === 'offer' && 'bg-green-500/20 text-green-400',
-                                      announcement.type === 'tournament' && 'bg-neon-cyan/20 text-neon-cyan',
-                                      announcement.type === 'info' && 'bg-neon-purple/20 text-neon-purple',
+                                      ann.type === 'info' && 'bg-blue-500/20 text-blue-400',
+                                      ann.type === 'offer' && 'bg-green-500/20 text-green-400',
+                                      ann.type === 'tournament' && 'bg-purple-500/20 text-purple-400',
+                                      ann.type === 'event' && 'bg-yellow-500/20 text-yellow-400',
                                     )}>
-                                      {announcement.type}
+                                      {ann.type}
                                     </Badge>
-                                    <Badge className={announcement.isActive ? 'bg-neon-cyan/20 text-neon-cyan' : 'bg-gray-500/20 text-gray-400'}>
-                                      {announcement.isActive ? 'Active' : 'Inactive'}
+                                    <Badge className={ann.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
+                                      {ann.isActive ? 'Active' : 'Inactive'}
                                     </Badge>
                                   </div>
                                 </div>
                                 <div className="flex gap-2 mt-4">
-                                  <Button size="sm" variant="outline" onClick={() => openForm('announcement', announcement as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('announcement', announcement.id)} className="text-red-400">Delete</Button>
+                                  <Button size="sm" variant="outline" onClick={() => openForm('announcement', ann as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('announcement', ann.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </div>
                             ))}
@@ -1109,9 +1142,9 @@ export default function AdminPanel() {
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <h4 className="font-display font-bold text-white">{pkg.name}</h4>
-                                    <Badge className="bg-neon-purple/20 text-neon-purple mt-1">{pkg.consoleType}</Badge>
-                                    <div className="text-neon-cyan font-bold mt-2">₹{pkg.price} <span className="text-gray-400 text-sm font-normal">/ {pkg.duration} min</span></div>
-                                    {pkg.discount && <div className="text-green-400 text-sm mt-1">{pkg.discount}% OFF</div>}
+                                    <p className="text-gray-400 text-sm mt-1">{pkg.consoleType}</p>
+                                    <div className="text-neon-cyan font-bold mt-2">₹{pkg.price} <span className="text-gray-400 font-normal text-sm">/ {pkg.duration} mins</span></div>
+                                    {pkg.discount && <div className="text-green-400 text-sm">{pkg.discount}% off</div>}
                                   </div>
                                   <Badge className={pkg.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
                                     {pkg.isActive ? 'Active' : 'Inactive'}
@@ -1119,7 +1152,151 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="flex gap-2 mt-4">
                                   <Button size="sm" variant="outline" onClick={() => openForm('pricing', pkg as unknown as Record<string, unknown>)} className="border-white/20 text-gray-300">Edit</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('pricing', pkg.id)} className="text-red-400">Delete</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('pricing', pkg.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Users Tab */}
+                  <TabsContent value="users" className="mt-0">
+                    <Card className="cyber-card">
+                      <CardHeader>
+                        <CardTitle className="text-white font-display">Manage Users</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-neon-cyan" /></div>
+                        ) : users.length === 0 ? (
+                          <p className="text-center text-gray-500 py-8">No users found</p>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-white/10">
+                                  <th className="text-left py-3 px-2 text-gray-400">Username</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Email</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Phone</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Bookings</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Total Spent</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Role</th>
+                                  <th className="text-left py-3 px-2 text-gray-400">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {users.map((user) => (
+                                  <tr key={user.id} className="border-b border-white/5 hover:bg-white/5">
+                                    <td className="py-3 px-2 text-white font-medium">{user.username}</td>
+                                    <td className="py-3 px-2 text-gray-400">{user.email || '-'}</td>
+                                    <td className="py-3 px-2 text-gray-400">{user.phone || '-'}</td>
+                                    <td className="py-3 px-2 text-neon-cyan">{user.bookingCount}</td>
+                                    <td className="py-3 px-2 text-green-400">₹{user.totalSpent}</td>
+                                    <td className="py-3 px-2">
+                                      <Badge className={user.isAdmin ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}>
+                                        {user.isAdmin ? 'Admin' : 'User'}
+                                      </Badge>
+                                    </td>
+                                    <td className="py-3 px-2">
+                                      <Button size="sm" variant="ghost" onClick={() => handleDelete('user', user.id)} className="text-red-400 hover:bg-red-500/10">
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Gallery Tab */}
+                  <TabsContent value="gallery" className="mt-0">
+                    <Card className="cyber-card">
+                      <CardHeader className="flex-row items-center justify-between">
+                        <CardTitle className="text-white font-display">Manage Gallery</CardTitle>
+                        <Button onClick={() => openForm('gallery')} className="btn-neon bg-neon-cyan text-black font-display">
+                          <Plus className="w-4 h-4 mr-2" /> Add Media
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-neon-cyan" /></div>
+                        ) : gallery.length === 0 ? (
+                          <p className="text-center text-gray-500 py-8">No gallery items found</p>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {gallery.map((item) => (
+                              <div key={item.id} className="relative group">
+                                <div className="aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                  {item.type === 'image' ? (
+                                    <img src={item.url} alt={item.title || ''} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                      <span className="text-gray-400">Video</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 rounded-lg">
+                                  <p className="text-white text-sm text-center px-2">{item.title || 'Untitled'}</p>
+                                  <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => openForm('gallery', item as unknown as Record<string, unknown>)} className="border-white/20 text-white">Edit</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => handleDelete('gallery', item.id)} className="text-red-400 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></Button>
+                                  </div>
+                                </div>
+                                {item.isFeatured && (
+                                  <Badge className="absolute top-2 left-2 bg-yellow-500/20 text-yellow-400 text-xs">Featured</Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Contact Messages Tab */}
+                  <TabsContent value="contact" className="mt-0">
+                    <Card className="cyber-card">
+                      <CardHeader>
+                        <CardTitle className="text-white font-display">Contact Messages</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-neon-cyan" /></div>
+                        ) : contactMessages.length === 0 ? (
+                          <p className="text-center text-gray-500 py-8">No contact messages found</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {contactMessages.map((msg) => (
+                              <div key={msg.id} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-neon-cyan/30 transition-all">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <h4 className="font-display font-bold text-white">{msg.subject}</h4>
+                                    <p className="text-gray-400 text-sm">From: {msg.name} ({msg.email})</p>
+                                    {msg.phone && <p className="text-gray-500 text-xs">Phone: {msg.phone}</p>}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Badge className={cn(
+                                      msg.status === 'new' && 'bg-blue-500/20 text-blue-400',
+                                      msg.status === 'read' && 'bg-yellow-500/20 text-yellow-400',
+                                      msg.status === 'replied' && 'bg-green-500/20 text-green-400',
+                                      msg.status === 'resolved' && 'bg-gray-500/20 text-gray-400',
+                                    )}>
+                                      {msg.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <p className="text-gray-300 text-sm bg-white/5 p-3 rounded">{msg.message}</p>
+                                <div className="flex gap-2 mt-3">
+                                  <Button size="sm" variant="outline" onClick={() => updateMessageStatus(msg.id, 'read')} className="border-white/20 text-gray-300 text-xs">Mark Read</Button>
+                                  <Button size="sm" variant="outline" onClick={() => updateMessageStatus(msg.id, 'replied')} className="border-white/20 text-gray-300 text-xs">Mark Replied</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete('contact', msg.id)} className="text-red-400 hover:bg-red-500/10 ml-auto"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </div>
                             ))}
@@ -1133,17 +1310,18 @@ export default function AdminPanel() {
             </Tabs>
           </div>
         </div>
-
-        <FormDialog
-          open={formOpen}
-          onClose={() => { setFormOpen(false); setEditingItem(null); }}
-          onSave={handleSave}
-          title={editingItem ? `Edit ${formType}` : `Add ${formType}`}
-          fields={formFields[formType]}
-          initialData={editingItem}
-          isLoading={isSaving}
-        />
       </DialogContent>
+      
+      {/* Form Dialog */}
+      <FormDialog
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditingItem(null); }}
+        onSave={handleSave}
+        title={editingItem ? `Edit ${formType}` : `Add ${formType}`}
+        fields={formFields[formType] || []}
+        initialData={editingItem}
+        isLoading={isSaving}
+      />
     </Dialog>
   );
 }
